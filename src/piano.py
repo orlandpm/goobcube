@@ -59,7 +59,12 @@ try:
     print("Loaded custom font: DejaVuSans.ttf")
 except Exception as e:
     print("⚠️ Failed to load DejaVuSans.ttf:", e)
-    font = None
+    try:
+        font = pygame.font.Font("DejaVuSans.ttf", 100)
+        print("Loaded custom font: DejaVuSans.ttf")
+    except Exception as e:
+        print("⚠️ Failed to load DejaVuSans.ttf:", e)
+        font = None
 
 if font is None:
     try:
