@@ -48,7 +48,7 @@ if selection:
 pygame.init()
 # screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 # screen = pygame.display.set_mode((0, 0))
-screen = pygame.display.set_mode((1920, 1080))
+screen = pygame.display.set_mode((1920, 1080), pygame.FULLSCREEN)
 
 
 info = pygame.display.Info()
