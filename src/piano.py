@@ -3,6 +3,7 @@ import time
 import mido
 from mido import Message, open_output, open_input, get_output_names, get_input_names
 import colorsys
+import random
 
 CURRENT_INSTRUMENT = 81
 
@@ -68,6 +69,14 @@ if font is None:
         print("⚠️ Failed to load default font:", e)
         font = None
 
+def random_color():
+    return tuple(random.randint(50, 255) for _ in range(3))
+
+goob_color = random_color()
+goob_text = font.render("GOOBCUBE", True, goob_color)
+goob_rect = goob_text.get_rect(center=(screen_width // 2, screen_height // 2))
+goob_velocity = [3, 2] 
+
 KEY_TO_NOTE = {**WHITE_KEYS, **BLACK_KEYS}
 active_notes = set()
 clock = pygame.time.Clock()
@@ -132,6 +141,27 @@ try:
                     screen.blit(text, text.get_rect(center=rect.center))
                 else:
                     print('font not found')
+        else:
+            bounced = False
+
+            # Move goobcube
+            goob_rect.x += goob_velocity[0]
+            goob_rect.y += goob_velocity[1]
+
+            # Bounce and flag if it hit anything
+            if goob_rect.left <= 0 or goob_rect.right >= screen_width:
+                goob_velocity[0] *= -1
+                bounced = True
+            if goob_rect.top <= 0 or goob_rect.bottom >= screen_height:
+                goob_velocity[1] *= -1
+                bounced = True
+
+            # If bounced, change color
+            if bounced:
+                goob_color = random_color()
+                goob_text = font.render("GOOBCUBE", True, goob_color)
+
+            screen.blit(goob_text, goob_rect)
 
         pygame.display.flip()
         clock.tick(60)
