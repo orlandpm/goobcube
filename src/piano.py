@@ -132,9 +132,6 @@ try:
                     screen.blit(text, text.get_rect(center=rect.center))
                 else:
                     print('font not found')
-                # text = font.render(f"{name}{octave}", True, (0, 0, 0))
-                text_rect = text.get_rect(center=rect.center)
-                screen.blit(text, text_rect)
 
         pygame.display.flip()
         clock.tick(60)
