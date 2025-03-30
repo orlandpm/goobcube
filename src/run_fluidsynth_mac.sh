@@ -1,0 +1,1 @@
+fluidsynth -a coreaudio ./soundfonts/FluidR3_GM.sf2 -v -m coremidi
