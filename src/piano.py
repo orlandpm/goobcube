@@ -80,7 +80,7 @@ def random_color():
 goob_color = random_color()
 goob_text = font.render("GOOBCUBE", True, goob_color)
 goob_rect = goob_text.get_rect(center=(screen_width // 2, screen_height // 2))
-goob_velocity = [3, 2] 
+goob_velocity = [1.5 * screen_width / 600, 1 * screen_height / 400] 
 
 KEY_TO_NOTE = {**WHITE_KEYS, **BLACK_KEYS}
 active_notes = set()
