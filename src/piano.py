@@ -27,6 +27,7 @@ if not midi_out_name:
 midi_output = open_output(midi_out_name)
 midi_output.send(Message('program_change', program=CURRENT_INSTRUMENT, channel=0))
 
+
 print("\n🎛 Available MIDI input ports:")
 input_names = get_input_names()
 for i, name in enumerate(input_names):
@@ -46,11 +47,26 @@ if selection:
 pygame.init()
 # screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 screen = pygame.display.set_mode((0, 0))
-font = pygame.font.SysFont(None, 100)
+
 info = pygame.display.Info()
 screen_width = info.current_w
 screen_height = info.current_h
 # pygame.display.set_caption("MIDI Piano Fullscreen")
+
+try:
+    font = pygame.font.Font("DejaVuSans.ttf", 100)
+    print("Loaded custom font: DejaVuSans.ttf")
+except Exception as e:
+    print("⚠️ Failed to load DejaVuSans.ttf:", e)
+    font = None
+
+if font is None:
+    try:
+        font = pygame.font.Font(None, 100)
+        print("Using default Pygame font")
+    except Exception as e:
+        print("⚠️ Failed to load default font:", e)
+        font = None
 
 KEY_TO_NOTE = {**WHITE_KEYS, **BLACK_KEYS}
 active_notes = set()
@@ -111,7 +127,12 @@ try:
                 rect = pygame.Rect(i * width_per_note, 0, width_per_note, screen_height)
                 pygame.draw.rect(screen, color, rect)
                 name, octave = note_to_name_octave(note)
-                text = font.render(f"{name}{octave}", True, (0, 0, 0))
+                if font:
+                    text = font.render(f"{name}{octave}", True, (0, 0, 0))
+                    screen.blit(text, text.get_rect(center=rect.center))
+                else:
+                    print('font not found')
+                # text = font.render(f"{name}{octave}", True, (0, 0, 0))
                 text_rect = text.get_rect(center=rect.center)
                 screen.blit(text, text_rect)
 
