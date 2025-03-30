@@ -55,12 +55,12 @@ screen_height = info.current_h
 # pygame.display.set_caption("MIDI Piano Fullscreen")
 
 try:
-    font = pygame.font.Font("DejaVuSans.ttf", 100)
+    font = pygame.font.Font("DejaVuSans.ttf", 200)
     print("Loaded custom font: DejaVuSans.ttf")
 except Exception as e:
     print("⚠️ Failed to load DejaVuSans.ttf:", e)
     try:
-        font = pygame.font.Font("DejaVuSans.ttf", 100)
+        font = pygame.font.Font("DejaVuSans.ttf", 200)
         print("Loaded custom font: DejaVuSans.ttf")
     except Exception as e:
         print("⚠️ Failed to load DejaVuSans.ttf:", e)
@@ -68,7 +68,7 @@ except Exception as e:
 
 if font is None:
     try:
-        font = pygame.font.Font(None, 100)
+        font = pygame.font.Font(None, 200)
         print("Using default Pygame font")
     except Exception as e:
         print("⚠️ Failed to load default font:", e)
@@ -80,7 +80,7 @@ def random_color():
 goob_color = random_color()
 goob_text = font.render("GOOBCUBE", True, goob_color)
 goob_rect = goob_text.get_rect(center=(screen_width // 2, screen_height // 2))
-goob_velocity = [1.5 * screen_width / 600, 1 * screen_height / 400] 
+goob_velocity = [3 * screen_width / 600, 2 * screen_height / 400] 
 
 KEY_TO_NOTE = {**WHITE_KEYS, **BLACK_KEYS}
 active_notes = set()
