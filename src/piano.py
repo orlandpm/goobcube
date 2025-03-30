@@ -2,65 +2,76 @@ import pygame
 import time
 import mido
 from mido import Message, open_output, open_input, get_output_names, get_input_names
+import colorsys
 
-# 🎛 Choose your General MIDI instrument
-CURRENT_INSTRUMENT = 81  # 0 = Grand Piano, 81 = Synth Lead 1 (square)
+CURRENT_INSTRUMENT = 81
 
-# 🎹 Define key mappings
 WHITE_KEYS = {
-    pygame.K_a: 60,  # C
-    pygame.K_s: 62,  # D
-    pygame.K_d: 64,  # E
-    pygame.K_f: 65,  # F
-    pygame.K_g: 67,  # G
-    pygame.K_h: 69,  # A
-    pygame.K_j: 71,  # B
-    pygame.K_k: 72   # C
+    pygame.K_a: 60, pygame.K_s: 62, pygame.K_d: 64, pygame.K_f: 65,
+    pygame.K_g: 67, pygame.K_h: 69, pygame.K_j: 71, pygame.K_k: 72
 }
-
 BLACK_KEYS = {
-    pygame.K_w: 61,  # C#
-    pygame.K_e: 63,  # D#
-    pygame.K_t: 66,  # F#
-    pygame.K_y: 68,  # G#
-    pygame.K_u: 70   # A#
+    pygame.K_w: 61, pygame.K_e: 63, pygame.K_t: 66, pygame.K_y: 68, pygame.K_u: 70
 }
 
-def build_key_map():
-    key_map = {}
-    key_map.update(WHITE_KEYS)
-    key_map.update(BLACK_KEYS)
-    return key_map
+NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
-# 🧩 Initialize Pygame
-pygame.init()
-screen = pygame.display.set_mode((400, 100))
-pygame.display.set_caption("MIDI Piano (Keyboard + Controller)")
-
-# 🔌 MIDI output device
 print("\n🎛 Available MIDI output ports:")
 for port in get_output_names():
     print(f"  {port}")
 
-# Open FluidSynth or default output port
 midi_out_name = next((name for name in get_output_names() if "fluid" in name.lower()), None)
 if not midi_out_name:
     raise RuntimeError("Could not find FluidSynth MIDI output device.")
 
 midi_output = open_output(midi_out_name)
-
-# Send program change to set instrument
 midi_output.send(Message('program_change', program=CURRENT_INSTRUMENT, channel=0))
 
-# 🎛 Optional MIDI input (controller)
-midi_input_name = next((name for name in get_input_names() if "midi" in name.lower()), None)
-midi_input = open_input(midi_input_name) if midi_input_name else None
+print("\n🎛 Available MIDI input ports:")
+input_names = get_input_names()
+for i, name in enumerate(input_names):
+    print(f"  {i+1}. {name}")
+selection = input("Select MIDI input device number (or leave blank for none): ")
+midi_input = None
+if selection:
+    try:
+        idx = int(selection) - 1
+        if 0 <= idx < len(input_names):
+            midi_input = open_input(input_names[idx])
+    except ValueError:
+        pass
 
-# 🎹 Key mapping and app state
-KEY_TO_NOTE = build_key_map()
+
+
+pygame.init()
+# screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+screen = pygame.display.set_mode((0, 0))
+font = pygame.font.SysFont(None, 100)
+info = pygame.display.Info()
+screen_width = info.current_w
+screen_height = info.current_h
+# pygame.display.set_caption("MIDI Piano Fullscreen")
+
+KEY_TO_NOTE = {**WHITE_KEYS, **BLACK_KEYS}
 active_notes = set()
 clock = pygame.time.Clock()
 running = True
+
+
+def note_to_name_octave(n):
+    name = NOTE_NAMES[n % 12]
+    octave = n // 12 - 1
+    return name, octave
+
+
+def note_to_color(note):
+    name, octave = note_to_name_octave(note)
+    hue = (note % 12) / 12.0
+    brightness = (octave - 1) / 7.0
+    brightness = max(0.2, min(brightness, 1.0))
+    r, g, b = colorsys.hsv_to_rgb(hue, 1.0, brightness)
+    return int(r * 255), int(g * 255), int(b * 255)
+
 
 try:
     while running:
@@ -69,27 +80,40 @@ try:
                 running = False
 
             elif event.type == pygame.KEYDOWN:
-                key_name = pygame.key.name(event.key)
+                if event.key == pygame.K_ESCAPE:
+                    running = False
                 note = KEY_TO_NOTE.get(event.key)
-                print(f"Key pressed: {event.key} ({key_name}) -> Note ON {note}")
                 if note is not None and note not in active_notes:
                     midi_output.send(Message('note_on', note=note, velocity=127, channel=0))
                     active_notes.add(note)
 
             elif event.type == pygame.KEYUP:
                 note = KEY_TO_NOTE.get(event.key)
-                print(f"Key released: {event.key} -> Note OFF {note}")
                 if note is not None and note in active_notes:
                     midi_output.send(Message('note_off', note=note, velocity=0, channel=0))
                     active_notes.remove(note)
 
-        # Handle MIDI controller input
         if midi_input and midi_input.poll():
             for msg in midi_input.iter_pending():
                 if msg.type == 'note_on' and msg.velocity > 0:
                     midi_output.send(msg)
+                    active_notes.add(msg.note)
                 elif msg.type in ('note_off', 'note_on') and msg.velocity == 0:
                     midi_output.send(Message('note_off', note=msg.note, velocity=0, channel=msg.channel))
+                    active_notes.discard(msg.note)
+
+        screen.fill((0, 0, 0))
+        notes = sorted(active_notes)
+        if notes:
+            width_per_note = screen_width // len(notes)
+            for i, note in enumerate(notes):
+                color = note_to_color(note)
+                rect = pygame.Rect(i * width_per_note, 0, width_per_note, screen_height)
+                pygame.draw.rect(screen, color, rect)
+                name, octave = note_to_name_octave(note)
+                text = font.render(f"{name}{octave}", True, (0, 0, 0))
+                text_rect = text.get_rect(center=rect.center)
+                screen.blit(text, text_rect)
 
         pygame.display.flip()
         clock.tick(60)
