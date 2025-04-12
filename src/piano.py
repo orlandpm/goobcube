@@ -5,6 +5,8 @@ from mido import Message, open_output, open_input, get_output_names, get_input_n
 import colorsys
 import random
 
+mido.set_backend('mido.backends.rtmidi')
+
 CURRENT_INSTRUMENT = 81
 
 WHITE_KEYS = {
@@ -36,19 +38,17 @@ for i, name in enumerate(input_names):
 selection = input("Select MIDI input device number (or leave blank for none): ")
 midi_input = None
 if selection:
-    try:
-        idx = int(selection) - 1
-        if 0 <= idx < len(input_names):
-            midi_input = open_input(input_names[idx])
-    except ValueError:
-        pass
+    idx = int(selection) - 1
+    if 0 <= idx < len(input_names):
+        midi_input = open_input(input_names[idx])
 
 
 
 pygame.init()
 # screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 # screen = pygame.display.set_mode((0, 0))
-screen = pygame.display.set_mode((1920, 1080), pygame.FULLSCREEN)
+screen = pygame.display.set_mode((640, 480), pygame.NOFRAME)
+# screen = pygame.display.set_mode((1920, 1080))#, pygame.FULLSCREEN)
 
 
 info = pygame.display.Info()
@@ -82,7 +82,7 @@ def random_color():
 goob_color = random_color()
 goob_text = font.render("GOOBCUBE", True, goob_color)
 goob_rect = goob_text.get_rect(center=(screen_width // 2, screen_height // 2))
-goob_velocity = [1.5 * screen_width / 600, 1 * screen_height / 400] 
+goob_velocity = [20, 1 * screen_height / 400] 
 
 KEY_TO_NOTE = {**WHITE_KEYS, **BLACK_KEYS}
 active_notes = set()
@@ -104,6 +104,22 @@ def note_to_color(note):
     r, g, b = colorsys.hsv_to_rgb(hue, 1.0, brightness)
     return int(r * 255), int(g * 255), int(b * 255)
 
+import threading
+def midi_listener():
+    while running:
+        if midi_input:
+            for msg in midi_input.iter_pending():
+                print("🎹 Incoming MIDI message:", msg)
+                if msg.type == 'note_on' and msg.velocity > 0:
+                    midi_output.send(msg)
+                    active_notes.add(msg.note)
+                elif msg.type == 'note_off' or (msg.type == 'note_on' and msg.velocity == 0):
+                    midi_output.send(Message('note_off', note=msg.note, velocity=0, channel=msg.channel))
+                    active_notes.discard(msg.note)
+
+if midi_input:
+    midi_thread = threading.Thread(target=midi_listener, daemon=True)
+    midi_thread.start()
 
 try:
     while running:
@@ -125,14 +141,21 @@ try:
                     midi_output.send(Message('note_off', note=note, velocity=0, channel=0))
                     active_notes.remove(note)
 
-        if midi_input and midi_input.poll():
-            for msg in midi_input.iter_pending():
-                if msg.type == 'note_on' and msg.velocity > 0:
-                    midi_output.send(msg)
-                    active_notes.add(msg.note)
-                elif msg.type in ('note_off', 'note_on') and msg.velocity == 0:
-                    midi_output.send(Message('note_off', note=msg.note, velocity=0, channel=msg.channel))
-                    active_notes.discard(msg.note)
+            # if midi_input:
+            #     for msg in midi_input.iter_pending():
+            #         print("🎹 Incoming MIDI message:", msg)
+            #         if msg.type == 'note_on' and msg.velocity > 0:
+            #             midi_output.send(msg)
+            #             active_notes.add(msg.note)
+            #         elif msg.type in ('note_off', 'note_on') and msg.velocity == 0:
+            #             midi_output.send(Message('note_off', note=msg.note, velocity=0, channel=msg.channel))
+            #             active_notes.discard(msg.note)
+
+# port_name = ports[int(selection) - 1]
+# with mido.open_input(port_name) as port:
+#     print(f"Listening on {port_name}...")
+#     for msg in port:
+#         print(msg)
 
         screen.fill((0, 0, 0))
         notes = sorted(active_notes)
@@ -152,8 +175,9 @@ try:
             bounced = False
 
             # Move goobcube
-            goob_rect.x += goob_velocity[0]
-            goob_rect.y += goob_velocity[1]
+            time_elapsed = clock.tick(60) / 1000.0
+            goob_rect.x += goob_velocity[0] * time_elapsed
+            goob_rect.y += goob_velocity[1] * time_elapsed
 
             # Bounce and flag if it hit anything
             if goob_rect.left <= 0 or goob_rect.right >= screen_width:
