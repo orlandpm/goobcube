@@ -224,11 +224,19 @@ try:
             goob_rect.y += goob_velocity[1] * time_elapsed
 
             # Bounce and flag if it hit anything
-            if goob_rect.left <= 0 or goob_rect.right >= screen_width:
-                goob_velocity[0] *= -1
+            if goob_rect.left <= 0:
+                goob_velocity[0] = abs(goob_velocity[0])
                 bounced = True
-            if goob_rect.top <= 0 or goob_rect.bottom >= screen_height-white_height:
-                goob_velocity[1] *= -1
+
+            elif goob_rect.right >= screen_width:
+                goob_velocity[0] *= -abs(goob_velocity[0])
+                bounced = True
+            
+            if goob_rect.top <= 0:
+                goob_velocity[1] = abs(goob_velocity[1])
+                bounced = True
+            elif goob_rect.bottom >= screen_height-white_height:
+                goob_velocity[1] *= -abs(goob_velocity[1])
                 bounced = True
 
             # If bounced, change color
