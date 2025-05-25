@@ -229,14 +229,14 @@ try:
                 bounced = True
 
             elif goob_rect.right >= screen_width:
-                goob_velocity[0] *= -abs(goob_velocity[0])
+                goob_velocity[0] = -abs(goob_velocity[0])
                 bounced = True
             
             if goob_rect.top <= 0:
                 goob_velocity[1] = abs(goob_velocity[1])
                 bounced = True
             elif goob_rect.bottom >= screen_height-white_height:
-                goob_velocity[1] *= -abs(goob_velocity[1])
+                goob_velocity[1] = -abs(goob_velocity[1])
                 bounced = True
 
             # If bounced, change color
