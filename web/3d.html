@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Solids + Variables — Three.js Demo</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    #wrap { display: flex; height: 100%; }
+    #menu {
+      width: 340px; max-width: 50vw; overflow: auto; padding: 16px;
+      border-right: 1px solid #e5e7eb; background: #fafafa;
+    }
+    #scene { flex: 1; position: relative; }
+    #scene canvas { display: block; }
+    h2 { font-size: 14px; margin: 0 0 8px; color: #111827; text-transform: uppercase; letter-spacing: .06em; }
+    .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0; }
+    .row label { font-size: 14px; color: #111827; }
+    .muted { color: #6b7280; font-size: 12px; }
+    .slider { width: 100%; }
+    .gridline { position: absolute; inset: 0; pointer-events: none; }
+    .solid-title { font-weight: 600; }
+    .badge { display:inline-block; padding:2px 6px; font-size:11px; border-radius:999px; background:#eef2ff; color:#3730a3; }
+    .vars { font-size:12px; color:#4b5563; }
+    .footer { font-size: 12px; color:#6b7280; margin-top: 8px; }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/": "https://unpkg.com/three@0.160.0/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="texture-library" style="display: none;">
+    <img id="plywood" src="11_bamboo plywood texture-seamless.jpg">
+  </div>
+  <div id="wrap">
+    <aside id="menu">
+      <div style="margin-bottom: 16px; text-align: center;">
+        <h1 style="font-size: 1.75em; font-weight: 600; margin: 0 0 4px;">GoobCAD</h1>
+        <div class="muted">© 2025</div>
+      </div>
+      <div class="panel">
+        <h2>Variables</h2>
+        <div id="varControls"></div>
+      </div>
+      <div class="panel">
+        <h2>Solids</h2>
+        <div id="solidControls"></div>
+      </div>
+      <div class="footer">
+        • Type supports numbers or expressions (e.g. <code>u*2</code>, <code>1.5+v/2</code>).<br/>
+        • Drag to rotate, wheel to zoom, right-drag to pan.
+      </div>
+    </aside>
+    <main id="scene"></main>
+  </div>
+
+  <script type="module">
+    // ===== Imports =====
+    import * as THREE from "three";
+    import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+    
+    // ===== Helper: basic checkerboard texture (no external assets) =====
+    function makeCheckerTexture(size=256, squares=8) {
+      const c = document.createElement('canvas');
+      c.width = c.height = size;
+      const ctx = c.getContext('2d');
+      const s = size / squares;
+      for (let y=0; y<squares; y++) {
+        for (let x=0; x<squares; x++) {
+          ctx.fillStyle = ((x + y) % 2 === 0) ? '#e5e7eb' : '#9ca3af';
+          ctx.fillRect(x*s, y*s, s, s);
+        }
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.anisotropy = 8;
+      return tex;
+    }
+
+    // ===== Variables definition (name -> {min,max,step, value}) =====
+    // You can add more variables or adjust ranges/steps here.
+    const variables = {
+      u: { min: -5, max: 5, step: 0.1, value: 1.5 },
+      v: { min: 0, max: 10, step: 0.1, value: 3 },
+      h: { min: 0.5, max: 6, step: 0.1, value: 2.5 },
+      r: { min: 0.25, max: 3, step: 0.05, value: 1.0 },
+    };
+
+    // ===== Solids definition =====
+    // Types: "box", "cylinder", "sphere", "triangular_prism"
+    // Positions and sizes can be numbers or string expressions using variables above.
+    // Each solid also lists which variables it uses ("vars") so we can surface them clearly.
+    const solids = [
+      {
+        id: "box1",
+        type: "box",
+        name: "Rectangular Prism A",
+        vars: ["u","v"],
+        position: { x: "u", y: 0.5, z: "v - 4" },
+        size: { w: 2, h: "1 + u*0.2", d: 1.5 },
+        material: { texture: "plywood" },
+        visible: true
+      },
+      {
+        id: "cyl1",
+        type: "cylinder",
+        name: "Cylinder (axis Y)",
+        vars: ["h","r","u"],
+        axis: "y",
+        position: { x: "-2 + u*0.5", y: "h/2", z: 0 },
+        size: { radiusTop: "r", radiusBottom: "r", height: "h" },
+        material: { texture: "checker" },
+        visible: true
+      },
+      {
+        id: "sph1",
+        type: "sphere",
+        name: "Sphere",
+        vars: ["v","r"],
+        position: { x: 3, y: "r + 0.01", z: "1 + v*0.2" },
+        size: { radius: "r" },
+        material: { color: "#34d399" }, // green-400
+        visible: true
+      },
+      {
+        id: "box2",
+        type: "box",
+        name: "Tall Box",
+        vars: ["u","h"],
+        position: { x: "-5", y: "h/2", z: "-3 + u*0.4" },
+        size: { w: 1.2, h: "h", d: 1.2 },
+        material: { color: "#f472b6" }, // pink-400
+        visible: true
+      },
+      {
+        id: "tri1",
+        type: "triangular_prism",
+        name: "Triangular Prism",
+        vars: ["u","v","r"],
+        position: { x: "u", y: "r", z: "v" },
+        size: { w: "1+r", d: "1.5+r*0.5", h: "r*2" },
+        material: { color: "#f59e0b" }, // amber-500
+        visible: true
+      }
+    ];
+
+    // ===== Expression evaluation (safe-ish) =====
+    // Supports numbers, + - * / **, parentheses, and variable names.
+    // Rejects unexpected characters to reduce eval surface.
+    const SAFE_CHARS = /^[\d+\-*/().\sA-Za-z_]+$/;
+    function evalExpr(exprOrNumber, scope) {
+      if (typeof exprOrNumber === "number") return exprOrNumber;
+      const expr = String(exprOrNumber).trim();
+      if (!SAFE_CHARS.test(expr)) {
+        throw new Error(`Illegal characters in expression: "${expr}"`);
+      }
+      // Only allow known identifiers (variables) and arithmetic operators.
+      // Bind Math for potential future extension if needed (not required here).
+      const fn = new Function("vars", `
+        with (vars) {
+          return (${expr});
+        }
+      `);
+      return fn(scope);
+    }
+
+    function numeric(val, scope) {
+      const n = evalExpr(val, scope);
+      if (!Number.isFinite(n)) throw new Error(`Expression did not resolve to finite number: ${val}`);
+      return n;
+    }
+
+    // ===== Three.js setup =====
+    const sceneEl = document.getElementById('scene');
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(sceneEl.clientWidth, sceneEl.clientHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    sceneEl.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf8fafc);
+
+    const camera = new THREE.PerspectiveCamera(50, sceneEl.clientWidth / sceneEl.clientHeight, 0.1, 1000);
+    camera.position.set(8, 7, 12);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+    dir.position.set(5, 10, 4);
+    scene.add(dir);
+
+    // Ground + helpers
+    const grid = new THREE.GridHelper(40, 40, 0x9ca3af, 0xe5e7eb);
+    grid.position.y = 0;
+    scene.add(grid);
+
+    const axes = new THREE.AxesHelper(3);
+    axes.position.y = 0.01;
+    scene.add(axes);
+
+    // ===== Materials cache =====
+    const textureLoader = new THREE.TextureLoader();
+    const materials = {
+      checker: new THREE.MeshStandardMaterial({ map: makeCheckerTexture(), metalness: 0.1, roughness: 0.8 }),
+    };
+    const imageElements = new Map(); // texture path -> <img> element
+
+    function materialFromSpec(spec) {
+      if (spec?.texture) {
+        if (spec.texture === "checker") return materials.checker;
+        
+        // Check if a material for this texture is already cached
+        if (materials[spec.texture]) return materials[spec.texture];
+
+        const image = document.getElementById(spec.texture);
+        // If image is loaded, create material and cache it
+        if (image && image.complete && image.naturalWidth > 0) {
+          const texture = new THREE.Texture(image);
+          texture.needsUpdate = true;
+          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+          texture.anisotropy = 8;
+          const newMat = new THREE.MeshStandardMaterial({
+            map: texture,
+            metalness: 0.1,
+            roughness: 0.85
+          });
+          materials[spec.texture] = newMat;
+          return newMat;
+        }
+        
+        // If image not ready, return a placeholder material
+        materials.placeholder = materials.placeholder || new THREE.MeshStandardMaterial({ color: '#ccc' });
+        return materials.placeholder;
+      }
+
+      const m = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(spec?.color ?? "#93c5fd"),
+        metalness: 0.1,
+        roughness: 0.85
+      });
+      return m;
+    }
+
+    // ===== Build & manage solid meshes =====
+    const solidState = new Map(); // id -> {def, mesh}
+
+    function buildGeometry(def, scope) {
+      if (def.type === "box") {
+        const w = numeric(def.size.w, scope);
+        const h = numeric(def.size.h, scope);
+        const d = numeric(def.size.d, scope);
+        return new THREE.BoxGeometry(w, h, d);
+      } else if (def.type === "sphere") {
+        const r = numeric(def.size.radius, scope);
+        return new THREE.SphereGeometry(r, 32, 16);
+      } else if (def.type === "cylinder") {
+        const rTop = numeric(def.size.radiusTop, scope);
+        const rBot = numeric(def.size.radiusBottom, scope);
+        const h = numeric(def.size.height, scope);
+        // default along Y; we can rotate later to align axis.
+        return new THREE.CylinderGeometry(rTop, rBot, h, 32, 1);
+      } else if (def.type === "triangular_prism") {
+        const w = numeric(def.size.w, scope);
+        const d = numeric(def.size.d, scope);
+        const h = numeric(def.size.h, scope);
+        const shape = new THREE.Shape();
+        shape.moveTo(-w/2, -d/2);
+        shape.lineTo(w/2, -d/2);
+        shape.lineTo(-w/2, d/2);
+        shape.closePath();
+        const extrudeSettings = { depth: h, bevelEnabled: false };
+        const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        geom.translate(0, 0, -h/2); // Center along extrusion axis (z)
+        geom.rotateX(Math.PI / 2); // Orient so height is along Y
+        return geom;
+      } else {
+        throw new Error(`Unknown solid type: ${def.type}`);
+      }
+    }
+
+    function setPositionAndAxis(mesh, def, scope) {
+      const px = numeric(def.position.x ?? 0, scope);
+      const py = numeric(def.position.y ?? 0, scope);
+      const pz = numeric(def.position.z ?? 0, scope);
+      mesh.position.set(px, py, pz);
+      mesh.rotation.set(0, 0, 0);
+
+      if (def.type === "cylinder") {
+        const axis = (def.axis ?? "y").toLowerCase();
+        if (axis === "x") mesh.rotation.z = Math.PI / 2;
+        else if (axis === "z") mesh.rotation.x = Math.PI / 2;
+      }
+    }
+
+    function ensureSolid(def) {
+      const scope = Object.fromEntries(Object.entries(variables).map(([k,v]) => [k, v.value]));
+      let entry = solidState.get(def.id);
+      const geom = buildGeometry(def, scope);
+      if (!entry) {
+        const mat = materialFromSpec(def.material ?? {});
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.castShadow = false; mesh.receiveShadow = true;
+        scene.add(mesh);
+        entry = { def, mesh };
+        solidState.set(def.id, entry);
+      } else {
+        entry.mesh.geometry.dispose();
+        entry.mesh.geometry = geom;
+        // Always re-evaluate material in case a texture has loaded
+        entry.mesh.material = materialFromSpec(def.material ?? {});
+      }
+      setPositionAndAxis(entry.mesh, def, scope);
+      entry.mesh.visible = !!def.visible;
+      entry.mesh.userData.name = def.name ?? def.id;
+    }
+
+    function rebuildAllSolids() {
+      solids.forEach(ensureSolid);
+      renderer.render(scene, camera);
+    }
+
+    // ===== UI: variable sliders =====
+    const varControls = document.getElementById('varControls');
+    function buildVarControls() {
+      varControls.innerHTML = "";
+      Object.entries(variables).forEach(([name, spec]) => {
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `
+          <label for="var_${name}"><span class="solid-title">${name}</span> <span class="muted">[${spec.min} .. ${spec.max}]</span></label>
+          <span class="badge" id="val_${name}">${spec.value}</span>
+        `;
+        varControls.appendChild(row);
+
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.className = 'slider';
+        slider.id = `var_${name}`;
+        slider.min = spec.min;
+        slider.max = spec.max;
+        slider.step = spec.step ?? 0.01;
+        slider.value = spec.value;
+        slider.addEventListener('input', () => {
+          spec.value = parseFloat(slider.value);
+          document.getElementById(`val_${name}`).textContent = spec.value.toFixed(3).replace(/\.?0+$/,'');
+          rebuildAllSolids();
+        });
+        varControls.appendChild(slider);
+      });
+    }
+
+    // ===== UI: solid toggles + info =====
+    const solidControls = document.getElementById('solidControls');
+    function buildSolidControls() {
+      solidControls.innerHTML = "";
+      solids.forEach((s) => {
+        const panel = document.createElement('div');
+        panel.className = 'panel';
+        panel.style.marginBottom = '8px';
+        panel.style.padding = '10px';
+
+        const row = document.createElement('div');
+        row.className = 'row';
+        const id = `chk_${s.id}`;
+        row.innerHTML = `
+          <label for="${id}" class="solid-title">${s.name ?? s.id}</label>
+          <input type="checkbox" id="${id}" ${s.visible ? 'checked' : ''}/>
+        `;
+        panel.appendChild(row);
+
+        const varsLine = document.createElement('div');
+        varsLine.className = 'vars';
+        if (Array.isArray(s.vars) && s.vars.length) {
+          varsLine.textContent = `vars: ${s.vars.join(', ')}`;
+        } else {
+          varsLine.textContent = 'vars: —';
+        }
+        panel.appendChild(varsLine);
+
+        const pos = s.position ?? {};
+        const size = s.size ?? {};
+        const details = document.createElement('div');
+        details.className = 'muted';
+        details.style.marginTop = '6px';
+        details.innerHTML = `
+          <div>position: x=${pos.x ?? 0}, y=${pos.y ?? 0}, z=${pos.z ?? 0}</div>
+          <div>size: ${s.type === 'box'
+              ? `w=${size.w}, h=${size.h}, d=${size.d}`
+              : s.type === 'sphere'
+              ? `radius=${size.radius}`
+              : s.type === 'triangular_prism'
+              ? `w=${size.w}, d=${size.d}, h=${size.h}`
+              : `rTop=${size.radiusTop}, rBot=${size.radiusBottom}, h=${size.height}${s.axis?`, axis=${s.axis}`:''}`
+            }
+          </div>
+        `;
+        panel.appendChild(details);
+
+        const chk = row.querySelector('input');
+        chk.addEventListener('change', () => {
+          s.visible = chk.checked;
+          const entry = solidState.get(s.id);
+          if (entry) entry.mesh.visible = s.visible;
+          renderer.render(scene, camera);
+        });
+
+        solidControls.appendChild(panel);
+      });
+    }
+
+    // ===== Handle texture loading from hardcoded <img> tags =====
+    function initializeTextureLoading() {
+      const textureLibrary = document.getElementById('texture-library');
+      if (!textureLibrary) return;
+
+      const images = textureLibrary.getElementsByTagName('img');
+      for (const img of images) {
+        if (!img.complete) {
+          img.onload = () => {
+            console.log(`Texture loaded: ${img.id}`);
+            rebuildAllSolids();
+          };
+          img.onerror = () => console.error(`Failed to load texture: ${img.id}`);
+        }
+      }
+    }
+
+    // ===== Resize handling =====
+    function onResize() {
+      const w = sceneEl.clientWidth;
+      const h = sceneEl.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      renderer.render(scene, camera);
+    }
+    window.addEventListener('resize', onResize);
+    // In case the sidebar width changes with scrollbar, reflow shortly after load:
+    setTimeout(onResize, 50);
+
+    // ===== Animate =====
+    function animate() {
+      controls.update();
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    // ===== Init =====
+    initializeTextureLoading();
+    buildVarControls();
+    buildSolidControls();
+    rebuildAllSolids();
+    animate();
+
+    // Expose for console tinkering if desired:
+    window.__solids = solids;
+    window.__vars = variables;
+  </script>
+</body>
+</html>
