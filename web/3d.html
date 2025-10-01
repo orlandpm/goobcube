@@ -100,6 +100,9 @@
     // Positions and sizes can be numbers or string expressions using variables above.
     // Each solid also lists which variables it uses ("vars") so we can surface them clearly.
 
+    // const PANEL_TEXTURE = { texture: "plywood" };
+    const PANEL_TEXTURE = { color: "#80ef80"};
+
     const solids = [
       {
         id: "bottom",
@@ -108,19 +111,104 @@
         vars: ["u","v"],
         position: { x: 0, y: 0, z: 0 },
         size: { dx: 12.5, dy: 0.75, dz: 12.5 },
-        material: { texture: "plywood" },
+        material: PANEL_TEXTURE,
         visible: true
       },
 
       {
         id: "top",
-        type: "box",
-        name: "Rectangular Prism A",
+        type: "group",
+        name: "Top Assembly",
         vars: ["u","v"],
         position: { x: 0, y: 9.25, z: 0 },
-        size: { dx: 12.5, dy: 0.75, dz: 12.5 },
-        material: { texture: "plywood" },
-        visible: true
+        visible: true,
+        objects: [
+          {
+            id: "top-panel",
+            type: "box",
+            name: "Top Panel",
+            vars: ["u","v"],
+            position: { x: 0, y: 0, z: 0 },
+            size: { dx: 12.5, dy: 0.75, dz: 12.5 },
+            material: PANEL_TEXTURE,
+            visible: true
+          },
+          {
+            id: "joystick-stick",
+            type: "cylinder",
+            name: "Joystick Stick",
+            vars: [],
+            axis: "y",
+            position: { x: 8, y: 1.75, z: 8 }, // base at y=0.75, height 2, so center is 0.75 + 1 = 1.75
+            size: { radiusTop: 0.1, radiusBottom: 0.1, height: 2 },
+            material: { texture: "gray" },
+            visible: true
+          },
+          {
+            id: "joystick-handle",
+            type: "sphere",
+            name: "Joystick Handle",
+            vars: [],
+            position: { x: 8, y: 2.75, z: 8 }, // top of cylinder is at y=0.75+2=2.75
+            size: { radius: 0.5 },
+            material: { color: "red" },
+            visible: true
+          },
+          {
+            id: "joystick-base",
+            type: "cylinder",
+            name: "Joystick base",
+            vars: [],
+            axis: "y",
+            position: { x: 8, y: 0.75, z: 8 },
+            size: { radiusTop: 0.5, radiusBottom: 0.5, height: 0.1 },
+            material: { color: "black" },
+            visible: true
+          },
+          {
+            id: "a-button",
+            type: "cylinder",
+            name: "A button",
+            vars: [],
+            axis: "y",
+            position: { x: 8.5, y: 0.75, z: 5 },
+            size: { radiusTop: 0.5, radiusBottom: 0.5, height: 0.1 },
+            material: { color: "yellow" },
+            visible: true
+          },
+          {
+            id: "b-button",
+            type: "cylinder",
+            name: "A button",
+            vars: [],
+            axis: "y",
+            position: { x: 7.5, y: 0.75, z: 3 },
+            size: { radiusTop: 0.5, radiusBottom: 0.5, height: 0.1 },
+            material: { color: "yellow" },
+            visible: true
+          },
+          {
+            id: "home-button",
+            type: "cylinder",
+            name: "Home button",
+            vars: [],
+            axis: "y",
+            position: { x: 0.75 + 0.5 + 0.5, y: 0.75, z: 0.75 + 11.5 - 0.5 - 0.5 },
+            size: { radiusTop: 0.5, radiusBottom: 0.5, height: 0.1 },
+            material: { color: "white" },
+            visible: true
+          },
+          {
+            id: "self-destruct-enclosure",
+            type: "box",
+            name: "Self-Destruct Enclosure",
+            vars: [],
+            position: { x: 0.75 + 0.75, y: 0.75, z: 0.75 + 0.75 },
+            size: { dx: 2.72, dy: 1.5, dz: 2.72 },
+            material: { color: "#transparent" },
+            visible: true
+          }
+        ]
       },
 
 
@@ -138,7 +226,7 @@
             vars: [],
             position: {x:0.75, y:3-0.75, z:0.75},
             size: {dx:11.5, dy:0.75, dz:3},
-            material: { texture: "plywood" },
+            material: PANEL_TEXTURE,
             visible: true
           },
           {
@@ -168,7 +256,7 @@
             vars: [],
             position: {x:0.75, y:3-0.75, z:12.5 - 0.75 - 3},
             size: {dx:11.5, dy:0.75, dz:3},
-            material: { texture: "plywood" },
+            material: PANEL_TEXTURE,
             visible: true
           }
         ]
@@ -207,9 +295,9 @@
             type: "box",
             name: "Rectangular Prism A",
             vars: ["drawer_slide"],
-            position: { x: "4.5+drawer_slide", y: 4.1, z: 0.75 },
-            size: { dx: 8-0.75, dy: 0.75, dz: 11.5 },
-            material: { texture: "plywood" },
+            position: { x: "4.75+drawer_slide", y: 4.1, z: 0.0 },
+            size: { dx: 8-0.75, dy: 0.75, dz: 12.5 },
+            material: { color: "red" },
             visible: true
           },
           {
@@ -218,8 +306,8 @@
             name: "Rectangular Prism A",
             vars :["drawer_slide"],
             position: { x: "11.75+drawer_slide", y: 3.25, z: 0 },
-            size: { dx: 0.75, dy: 3.5, dz: 12.5 },
-            material: { texture: "plywood" },
+            size: { dx: 0.75, dy: 2.75, dz: 12.5 },
+            material: { color: "red" },
             visible: true
           },
           {
@@ -227,8 +315,8 @@
             type: "box",
             name: "Piano Body",
             vars: ["drawer_slide"],
-            position: { x: "4.5+drawer_slide", y: 4.85, z: 0.75 },
-            size: { dx: 7.25, dy: 1.5, dz: 11.5 },
+            position: { x: "4.75+drawer_slide", y: 4.85, z: 0 },
+            size: { dx: 7, dy: 1.25, dz: 12.5 },
             material: { color: "#ef4444" }, // red-500
             visible: true
           },
@@ -237,7 +325,7 @@
             type: "box",
             name: `White Key ${i + 1}`,
             vars: ["drawer_slide"],
-            position: { x: "6.75+drawer_slide", y: 6.35, z: 1.25 + i * 0.7 },
+            position: { x: "6.75+drawer_slide", y: 6.1, z: 1.25 + i * 0.7 },
             size: { dx: 5, dy: 0.2, dz: 0.7-0.1 },
             material: { color: "#ffffff" },
             visible: true
@@ -249,7 +337,7 @@
               type: "box",
               name: `Black Key ${i + 1}`,
               vars: ["drawer_slide"],
-              position: { x: "6.75+drawer_slide", y: 6.45, z: 1.25 + i * 0.7 + (0.7/2) },
+              position: { x: "6.75+drawer_slide", y: 6.2, z: 1.25 + i * 0.7 + (0.7/2) },
               size: { dx: 3, dy: 0.2, dz: 0.4 },
               material: { color: "#000000" },
               visible: true
@@ -272,7 +360,7 @@
             vars: [],
             position: { x: 0, y: 0, z: 0 },
             size: { dx: 12.5, dy: 3, dz: 0.75 },
-            material: { texture: "plywood" },
+            material: PANEL_TEXTURE,
             visible: true
           },
           {
@@ -281,8 +369,8 @@
             name: "Right Lower Prism",
             vars: [],
             position: { x: 0, y: 3, z: 0 },
-            size: { dx: 4.5, dy: 4, dz: 0.75 },
-            material: { texture: "plywood" },
+            size: { dx: 4, dy: 4, dz: 0.75 },
+            material: PANEL_TEXTURE,
             visible: true
           },
           {
@@ -290,9 +378,9 @@
             type: "box",
             name: "Right Lower Prism",
             vars: [],
-            position: { x: 4.5, y: 3, z: 0 },
+            position: { x: 4, y: 3, z: 0 },
             size: { dx: 6.5, dy: 0.75, dz: 0.75 },
-            material: { texture: "plywood" },
+            material: PANEL_TEXTURE,
             visible: true
           },
           {
@@ -302,9 +390,20 @@
             vars: [],
             position: { x: 0, y: 7, z: 0 },
             size: { dx: 12.5, dy: 3, dz: 0.75 },
-            material: { texture: "plywood" },
+            material: PANEL_TEXTURE,
             visible: true
-          }
+          },
+          {
+            id: "right-button",
+            type: "cylinder",
+            name: "X-Axis Cylinder",
+            vars: [],
+            axis: "z",
+            position: { x: 11, y: 8.5, z: 0 },
+            size: { radiusTop: 0.5, radiusBottom: 0.5, height: 0.25 },
+            material: { color: "#04d9ff" },
+            visible: true
+          },
         ]
       },
       {
@@ -322,7 +421,7 @@
             vars: [],
             position: { x: 0, y: 0, z: 11.75 },
             size: { dx: 12.5, dy: 3, dz: 0.75 },
-            material: { texture: "plywood" },
+            material: PANEL_TEXTURE,
             visible: true
           },
           {
@@ -331,8 +430,8 @@
             name: "Left Lower Prism",
             vars: [],
             position: { x: 0, y: 3, z: 11.75 },
-            size: { dx: 4.5, dy: 4, dz: 0.75 },
-            material: { texture: "plywood" },
+            size: { dx: 4, dy: 4, dz: 0.75 },
+            material: PANEL_TEXTURE,
             visible: true
           },
           {
@@ -340,9 +439,9 @@
             type: "box",
             name: "Left Lower Prism",
             vars: [],
-            position: { x: 4.5, y: 3, z: 11.75 },
+            position: { x: 4, y: 3, z: 11.75 },
             size: { dx: 6.5, dy: 0.75, dz: 0.75 },
-            material: { texture: "plywood" },
+            material: PANEL_TEXTURE,
             visible: true
           },
           {
@@ -352,9 +451,20 @@
             vars: [],
             position: { x: 0, y: 7, z: 11.75 },
             size: { dx: 12.5, dy: 3, dz: 0.75 },
-            material: { texture: "plywood" },
+            material: PANEL_TEXTURE,
             visible: true
-          }
+          },      
+          {
+            id: "left-button",
+            type: "cylinder",
+            name: "X-Axis Cylinder",
+            vars: [],
+            axis: "z",
+            position: { x: 11, y: 8.5, z: 12.5 },
+            size: { radiusTop: 0.5, radiusBottom: 0.5, height: 0.25 },
+            material: { color: "#04d9ff" },
+            visible: true
+          },
         ]
       },
       {
@@ -364,7 +474,7 @@
         vars: [],
         position: { x: 0, y: 0, z: 0 },
         size: { dx: 0.75, dy: 12.5, dz: 12.5 },
-        material: { texture: "plywood" },
+        material: PANEL_TEXTURE,
         visible: true
       },
       {
@@ -374,7 +484,7 @@
         vars :[],
         position: { x: 11.75, y: 7, z: 0 },
         size: { dx: 0.75, dy: 3, dz: 12.5 },
-        material: { texture: "plywood" },
+        material: PANEL_TEXTURE,
         visible: true
       },
 
@@ -385,7 +495,7 @@
         vars :[],
         position: { x: 11.75, y: 0, z: 0 },
         size: { dx: 0.75, dy: 3, dz: 12.5 },
-        material: { texture: "plywood" },
+        material: PANEL_TEXTURE,
         visible: true
       },
       // {
